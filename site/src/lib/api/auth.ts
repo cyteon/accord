@@ -16,15 +16,6 @@ export const requireAdminQ = query(async () => {
   return requireAdmin();
 }, "requireAdmin");
 
-export async function register(data: {
-  email: string;
-  username: string;
-  displayName: string;
-  password: string;
-}) {
-  "use server";
-}
-
 export const login = action(async (formData: FormData) => {
   "use server";
 
@@ -53,3 +44,42 @@ export const login = action(async (formData: FormData) => {
   await createSession(user.id);
   throw redirect("/app");
 }, "login");
+
+export const register = action(async (formData: FormData) => {
+  "use server";
+
+  const email = String(formData.get("email") ?? "");
+  const username = String(formData.get("username") ?? "");
+  const displayName = String(formData.get("displayName") ?? "");
+  const password = String(formData.get("password") ?? "");
+
+  if (!email || !username || !displayName || !password) {
+    throw new Error("Missing email, username, display name, or password");
+  }
+
+  const [existingUser] = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.email, email), eq(users.username, username)));
+
+  if (existingUser) {
+    if (existingUser.email === email) {
+      throw new Error("Email already in use");
+    } else {
+      throw new Error("Username already in use");
+    }
+  }
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      email,
+      username,
+      displayName,
+      password: await bcrypt.hash(password, 12),
+    })
+    .returning();
+
+  await createSession(user.id);
+  throw redirect("/app");
+}, "register");
