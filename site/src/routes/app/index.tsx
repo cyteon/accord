@@ -1,5 +1,5 @@
 import { type RouteDefinition } from "@solidjs/router";
-import { requireUserQ } from "~/lib/server/auth.actions";
+import { requireUserQ } from "~/lib/api/auth";
 
 export const route = {
   preload: () => requireUserQ(),
