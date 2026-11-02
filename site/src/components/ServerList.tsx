@@ -24,11 +24,13 @@ export default function Serverlist() {
         </a>
       </AdminComponent>
 
+      {/*
       <hr class="m-2 border" />
 
       <button class="size-14 rounded-sm flex border border-dashed text-muted-fg">
         <Plus class="m-auto size-6" />
       </button>
+      */}
     </aside>
   );
 }
