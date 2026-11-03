@@ -1,4 +1,8 @@
-import { createAsync, type RouteDefinition } from "@solidjs/router";
+import {
+  createAsync,
+  useSubmission,
+  type RouteDefinition,
+} from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import HomeSidebar from "~/components/HomeSidebar";
 import Serverlist from "~/components/ServerList";
@@ -17,25 +21,7 @@ export default function App() {
   );
 
   const [addFriendUsername, setAddFriendUsername] = createSignal("");
-  const [addFriendError, setAddFriendError] = createSignal("");
-  const [addFriendSuccess, setAddFriendSuccess] = createSignal("");
-
-  async function handleAddFriend() {
-    setAddFriendError("");
-    setAddFriendSuccess("");
-
-    if (!addFriendUsername()) {
-      setAddFriendError("Enter a username");
-      return;
-    }
-
-    try {
-      const message = await sendFriendRequest(addFriendUsername());
-      setAddFriendSuccess(message);
-    } catch (e: any) {
-      setAddFriendError(e.message || "An error occurred");
-    }
-  }
+  const addFriendSubmission = useSubmission(sendFriendRequest);
 
   return (
     <main class="flex p-2.5 gap-2.5 h-screen">
@@ -86,11 +72,18 @@ export default function App() {
               name)
             </p>
 
-            <div class="flex w-full bg-bg rounded-md border-2">
+            <form
+              action={sendFriendRequest}
+              method="post"
+              class="flex w-full bg-bg rounded-md border-2"
+            >
               <p class="text-muted-fg ml-4 text-lg my-auto">@</p>
 
               <input
+                name="username"
+                id="username"
                 type="text"
+                autocomplete="off"
                 placeholder="Enter username"
                 value={addFriendUsername()}
                 onInput={(e) => setAddFriendUsername(e.currentTarget.value)}
@@ -98,20 +91,24 @@ export default function App() {
               />
 
               <button
-                onClick={handleAddFriend}
-                disabled={!addFriendUsername()}
+                type="submit"
+                disabled={!addFriendUsername() || addFriendSubmission.pending}
                 class="bg-primary text-primary-fg font-semibold rounded-sm w-36 m-1 text-sm disabled:bg-card disabled:text-muted-fg"
               >
                 Send request
               </button>
-            </div>
+            </form>
 
-            <Show when={addFriendError()}>
-              <p class="text-sm text-red-400 mt-2">{addFriendError()}</p>
+            <Show when={addFriendSubmission.error}>
+              <p class="text-sm text-red-400 mt-2">
+                {addFriendSubmission.error.message}
+              </p>
             </Show>
 
-            <Show when={addFriendSuccess()}>
-              <p class="text-sm text-green-400 mt-2">{addFriendSuccess()}</p>
+            <Show when={addFriendSubmission.result}>
+              <p class="text-sm text-green-400 mt-2">
+                {addFriendSubmission.result}
+              </p>
             </Show>
           </div>
         </Show>
