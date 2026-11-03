@@ -3,11 +3,12 @@ import {
   useSubmission,
   type RouteDefinition,
 } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
+import { Check, X } from "lucide-solid";
+import { createSignal, For, Show } from "solid-js";
 import HomeSidebar from "~/components/HomeSidebar";
 import Serverlist from "~/components/ServerList";
 import { requireUserQ } from "~/lib/api/auth";
-import { sendFriendRequest } from "~/lib/api/friends";
+import { getFriendRequests, sendFriendRequest } from "~/lib/api/friends";
 
 export const route = {
   preload: () => requireUserQ(),
@@ -15,9 +16,10 @@ export const route = {
 
 export default function App() {
   const user = createAsync(() => requireUserQ(), { deferStream: true });
+  const friendRequests = createAsync(() => getFriendRequests());
 
   const [tab, setTab] = createSignal<"online" | "all" | "pending" | "add">(
-    "online",
+    "pending",
   );
 
   const [addFriendUsername, setAddFriendUsername] = createSignal("");
@@ -52,6 +54,11 @@ export default function App() {
               onClick={() => setTab("pending")}
             >
               Pending
+              <Show when={friendRequests()?.incoming.length}>
+                <span class="font-bold text-red ml-2">
+                  {friendRequests()?.incoming.length}
+                </span>
+              </Show>
             </button>
           </div>
 
@@ -62,6 +69,90 @@ export default function App() {
             Add friend
           </button>
         </div>
+
+        <Show when={tab() === "pending"}>
+          <div class="flex flex-col w-full mt-4">
+            <div class="flex flex-col">
+              <h3 class="text-sm text-muted-fg font-semibold">
+                Incoming · {friendRequests()?.incoming.length}
+              </h3>
+
+              <For each={friendRequests()?.incoming}>
+                {(request, i) => (
+                  <>
+                    <div class="flex py-2">
+                      <span class="bg-accent rounded-sm w-10 h-10 my-auto mr-4 justify-center items-center flex font-bold">
+                        {request.user.displayName[0].toUpperCase()}
+                      </span>
+
+                      <div>
+                        <p class="text-fg font-semibold">
+                          {request.user.displayName}
+                        </p>
+
+                        <p class="text-sm text-muted-fg">
+                          @{request.user.username}
+                        </p>
+                      </div>
+
+                      <div class="flex ml-auto">
+                        <button class="bg-green text-bg font-semibold flex rounded-sm px-3 h-9 my-auto text-sm items-center">
+                          <Check class="size-4 mr-2" strokeWidth={3} />
+                          Accept
+                        </button>
+
+                        <button class="bg-bg/50 ml-2 text-red font-semibold flex rounded-sm size-9 my-auto text-sm items-center justify-center">
+                          <X class="size-5" strokeWidth={3} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <Show when={i() < friendRequests()?.incoming.length - 1}>
+                      <hr class="border-border/50!" />
+                    </Show>
+                  </>
+                )}
+              </For>
+            </div>
+
+            <div class="flex flex-col mt-4">
+              <h3 class="text-sm text-muted-fg font-semibold">
+                Sent · {friendRequests()?.outgoing.length}
+              </h3>
+
+              <For each={friendRequests()?.outgoing}>
+                {(request, i) => (
+                  <>
+                    <div class="flex py-2">
+                      <span class="bg-accent rounded-sm w-10 h-10 my-auto mr-4 justify-center items-center flex font-bold">
+                        {request.user.displayName[0].toUpperCase()}
+                      </span>
+
+                      <div>
+                        <p class="text-fg font-semibold">
+                          {request.user.displayName}
+                        </p>
+
+                        <p class="text-sm text-muted-fg">
+                          @{request.user.username}
+                        </p>
+                      </div>
+
+                      <div class="flex ml-auto">
+                        <button class="bg-accent font-semibold flex rounded-sm px-3 h-9 my-auto text-sm items-center">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                    <Show when={i() < friendRequests()?.outgoing.length - 1}>
+                      <hr class="border-border/50!" />
+                    </Show>
+                  </>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
 
         <Show when={tab() === "add"}>
           <div class="mt-4 w-full md:w-1/3 lg:w-2/3">

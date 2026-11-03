@@ -19,7 +19,6 @@ export async function requireUser() {
   return user;
 }
 
-
 export async function requireAdmin() {
   const user = await getUser();
   if (!user.admin) throw redirect("/app");
