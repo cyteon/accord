@@ -1,5 +1,6 @@
 import {
   createAsync,
+  useAction,
   useSubmission,
   type RouteDefinition,
 } from "@solidjs/router";
@@ -8,7 +9,13 @@ import { createSignal, For, Show } from "solid-js";
 import HomeSidebar from "~/components/HomeSidebar";
 import Serverlist from "~/components/ServerList";
 import { requireUserQ } from "~/lib/api/auth";
-import { getFriendRequests, sendFriendRequest } from "~/lib/api/friends";
+import {
+  acceptFriendRequest,
+  cancelFriendRequest,
+  declineFriendRequest,
+  getFriendRequests,
+  sendFriendRequest,
+} from "~/lib/api/friends";
 
 export const route = {
   preload: () => requireUserQ(),
@@ -25,6 +32,9 @@ export default function App() {
   const [addFriendUsername, setAddFriendUsername] = createSignal("");
   const addFriendSubmission = useSubmission(sendFriendRequest);
 
+  const accept = useAction(acceptFriendRequest);
+  const decline = useAction(declineFriendRequest);
+  const cancel = useAction(cancelFriendRequest);
   return (
     <main class="flex p-2.5 gap-2.5 h-screen">
       <Serverlist />
@@ -96,12 +106,18 @@ export default function App() {
                       </div>
 
                       <div class="flex ml-auto">
-                        <button class="bg-green text-bg font-semibold flex rounded-sm px-3 h-9 my-auto text-sm items-center">
+                        <button
+                          class="bg-green text-bg font-semibold flex rounded-sm px-3 h-9 my-auto text-sm items-center"
+                          onClick={() => accept(request.user.id)}
+                        >
                           <Check class="size-4 mr-2" strokeWidth={3} />
                           Accept
                         </button>
 
-                        <button class="bg-bg/50 ml-2 text-red font-semibold flex rounded-sm size-9 my-auto text-sm items-center justify-center">
+                        <button
+                          class="bg-bg/50 ml-2 text-red font-semibold flex rounded-sm size-9 my-auto text-sm items-center justify-center"
+                          onClick={() => decline(request.user.id)}
+                        >
                           <X class="size-5" strokeWidth={3} />
                         </button>
                       </div>
@@ -139,7 +155,10 @@ export default function App() {
                       </div>
 
                       <div class="flex ml-auto">
-                        <button class="bg-accent font-semibold flex rounded-sm px-3 h-9 my-auto text-sm items-center">
+                        <button
+                          class="bg-accent font-semibold flex rounded-sm px-3 h-9 my-auto text-sm items-center"
+                          onClick={() => cancel(request.user.id)}
+                        >
                           Cancel
                         </button>
                       </div>
@@ -191,13 +210,13 @@ export default function App() {
             </form>
 
             <Show when={addFriendSubmission.error}>
-              <p class="text-sm text-red-400 mt-2">
+              <p class="text-sm text-red mt-2">
                 {addFriendSubmission.error.message}
               </p>
             </Show>
 
             <Show when={addFriendSubmission.result}>
-              <p class="text-sm text-green-400 mt-2">
+              <p class="text-sm text-green mt-2">
                 {addFriendSubmission.result}
               </p>
             </Show>

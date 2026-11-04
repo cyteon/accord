@@ -18,6 +18,7 @@ export const getFriendRequests = query(async () => {
     .select({
       requesterId: friendships.requesterId,
       user: {
+        id: users.id,
         username: users.username,
         displayName: users.displayName,
       },
@@ -101,3 +102,64 @@ export const sendFriendRequest = action(
     return "Friend request sent";
   },
 );
+
+export const acceptFriendRequest = action(async (otherId: string) => {
+  "use server";
+  const self = await requireUser();
+
+  const [userA, userB] = sortPair(self.id, otherId);
+  const pairQuery = and(
+    eq(friendships.userA, userA),
+    eq(friendships.userB, userB),
+  );
+
+  await db
+    .update(friendships)
+    .set({
+      status: "accepted",
+      acceptedAt: new Date(),
+    })
+    .where(and(pairQuery, eq(friendships.requesterId, otherId)));
+});
+
+export const declineFriendRequest = action(async (otherId: string) => {
+  "use server";
+  const self = await requireUser();
+
+  const [userA, userB] = sortPair(self.id, otherId);
+  const pairQuery = and(
+    eq(friendships.userA, userA),
+    eq(friendships.userB, userB),
+  );
+
+  await db
+    .delete(friendships)
+    .where(
+      and(
+        pairQuery,
+        eq(friendships.requesterId, otherId),
+        eq(friendships.status, "pending"),
+      ),
+    );
+});
+
+export const cancelFriendRequest = action(async (otherId: string) => {
+  "use server";
+  const self = await requireUser();
+
+  const [userA, userB] = sortPair(self.id, otherId);
+  const pairQuery = and(
+    eq(friendships.userA, userA),
+    eq(friendships.userB, userB),
+  );
+
+  await db
+    .delete(friendships)
+    .where(
+      and(
+        pairQuery,
+        eq(friendships.requesterId, self.id),
+        eq(friendships.status, "pending"),
+      ),
+    );
+});

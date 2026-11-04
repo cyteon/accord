@@ -74,7 +74,7 @@ export default function Register() {
           />
 
           <Show when={submission.error}>
-            <p class="text-sm text-red-400">{submission.error.message}</p>
+            <p class="text-sm text-red">{submission.error.message}</p>
           </Show>
 
           <button
