@@ -3,7 +3,7 @@ import { requireUser } from "../server/auth";
 import { sortPair } from "./friends";
 import db from "../server/db";
 import { channels, messages, users } from "../server/db/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, lt } from "drizzle-orm";
 import { getOrCreateDm } from "../server/dms";
 
 export const getDm = query(async (otherId: string) => {
@@ -36,11 +36,22 @@ export const getDm = query(async (otherId: string) => {
     .where(eq(channels.dmKey, dmKey));
 
   const messageList = channel
-    ? await db
-        .select()
-        .from(messages)
-        .where(eq(messages.channelId, channel.id))
-        .orderBy(messages.createdAt)
+    ? (
+        await db
+          .select({
+            author: {
+              id: users.id,
+              username: users.username,
+              displayName: users.displayName,
+            },
+            ...getTableColumns(messages),
+          })
+          .from(messages)
+          .innerJoin(users, eq(users.id, messages.authorId))
+          .where(eq(messages.channelId, channel.id))
+          .orderBy(desc(messages.createdAt))
+          .limit(50)
+      ).reverse()
     : [];
 
   return {
@@ -78,3 +89,34 @@ export const sendDm = action(async (formData: FormData) => {
 
   return message;
 });
+
+export async function getOlderMessages(otherId: string, beforeId: string) {
+  "use server";
+  const self = await requireUser();
+
+  const [userA, userB] = sortPair(self.id, otherId);
+  const dmKey = `${userA}:${userB}`;
+
+  const [channel] = await db
+    .select()
+    .from(channels)
+    .where(eq(channels.dmKey, dmKey));
+  if (!channel) return [];
+
+  const rows = await db
+    .select({
+      author: {
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+      },
+      ...getTableColumns(messages),
+    })
+    .from(messages)
+    .innerJoin(users, eq(users.id, messages.authorId))
+    .where(and(eq(messages.channelId, channel.id), lt(messages.id, beforeId)))
+    .orderBy(desc(messages.createdAt))
+    .limit(50);
+
+  return rows.reverse();
+}
