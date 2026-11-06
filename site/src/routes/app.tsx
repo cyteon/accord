@@ -3,7 +3,7 @@ import {
   RouteDefinition,
   RouteSectionProps,
 } from "@solidjs/router";
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect, createMemo, onCleanup } from "solid-js";
 import { requireUserQ } from "~/lib/api/auth";
 import { connect, disconnect } from "~/lib/gateway";
 
@@ -13,9 +13,10 @@ export const route = {
 
 export default function AppLayout(props: RouteSectionProps) {
   const user = createAsync(() => requireUserQ());
+  const userId = createMemo(() => user()?.id);
 
   createEffect(() => {
-    if (!user()) return;
+    if (!userId()) return;
 
     connect();
     onCleanup(disconnect);

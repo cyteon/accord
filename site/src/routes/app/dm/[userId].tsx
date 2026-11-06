@@ -1,15 +1,10 @@
-import {
-  createAsync,
-  useParams,
-  useSubmission,
-  type RouteDefinition,
-} from "@solidjs/router";
+import { createAsync, useParams, useSubmission } from "@solidjs/router";
 import { ArrowUp } from "lucide-solid";
-import { createEffect, createSignal, For, on, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import HomeSidebar from "~/components/HomeSidebar";
 import Serverlist from "~/components/ServerList";
-import { requireUserQ } from "~/lib/api/auth";
 import { getDm, getOlderMessages, sendDm } from "~/lib/api/dms";
+import { onEvent } from "~/lib/gateway";
 import { Message } from "~/lib/types/client/message";
 
 export default function UserDM() {
@@ -33,8 +28,30 @@ export default function UserDM() {
         return;
       }
 
-      const ids = new Set(current.map((m) => m.id));
-      setList([...data.messages, ...current.filter((m) => !ids.has(m.id))]);
+      const byId = new Map(current.map((m) => [m.id, m]));
+      for (const message of data.messages) byId.set(message.id, message);
+
+      setList(
+        [...byId.values()].sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        ),
+      );
+    }),
+  );
+
+  onCleanup(
+    onEvent("MESSAGE_CREATE", (message: Message) => {
+      if (!dm()) return;
+      if (!(
+        message.channelId === dm()!.channel?.id ||
+        (!dm()!.channel && message.author.id === dm()!.otherUser.id)
+      ))
+        return;
+
+      setList((prev) =>
+        prev.some((m) => m.id === message.id) ? prev : [...prev, message],
+      );
     }),
   );
 

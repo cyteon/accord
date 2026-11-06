@@ -5,6 +5,7 @@ import db from "../server/db";
 import { channels, messages, users } from "../server/db/schema";
 import { and, desc, eq, getTableColumns, lt } from "drizzle-orm";
 import { getOrCreateDm } from "../server/dms";
+import { publish } from "../server/realtime";
 
 export const getDm = query(async (otherId: string) => {
   "use server";
@@ -86,6 +87,18 @@ export const sendDm = action(async (formData: FormData) => {
       content,
     })
     .returning();
+
+  await publish([self.id, otherId], {
+    e: "MESSAGE_CREATE",
+    d: {
+      author: {
+        id: self.id,
+        username: self.username,
+        displayName: self.displayName,
+      },
+      ...message,
+    },
+  });
 
   return message;
 });

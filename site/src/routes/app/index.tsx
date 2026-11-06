@@ -1,14 +1,8 @@
-import {
-  createAsync,
-  useAction,
-  useSubmission,
-  type RouteDefinition,
-} from "@solidjs/router";
+import { createAsync, useAction, useSubmission } from "@solidjs/router";
 import { Check, MessagesCircle, X } from "lucide-solid";
 import { createSignal, For, Show } from "solid-js";
 import HomeSidebar from "~/components/HomeSidebar";
 import Serverlist from "~/components/ServerList";
-import { requireUserQ } from "~/lib/api/auth";
 import {
   acceptFriendRequest,
   cancelFriendRequest,
@@ -18,7 +12,6 @@ import {
 } from "~/lib/api/friends";
 
 export default function App() {
-  const user = createAsync(() => requireUserQ(), { deferStream: true });
   const friends = createAsync(() => getFriends());
 
   const [tab, setTab] = createSignal<"online" | "all" | "pending" | "add">(
