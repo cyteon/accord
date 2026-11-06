@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   pgEnum,
   pgTable,
   primaryKey,
@@ -52,4 +53,30 @@ export const friendships = pgTable(
     acceptedAt: timestamp({ withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.userA, t.userB] })],
+);
+
+// currently only dms
+export const channels = pgTable("channels", {
+  id: uuid()
+    .primaryKey()
+    .$defaultFn(() => v7()),
+  dmKey: text().unique(),
+});
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => v7()),
+    channelId: uuid()
+      .notNull()
+      .references(() => channels.id, { onDelete: "cascade" }),
+    authorId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("messages_channel_id_idx").on(t.channelId, t.id)],
 );

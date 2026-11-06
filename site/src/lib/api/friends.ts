@@ -4,11 +4,11 @@ import db from "../server/db";
 import { friendships, users } from "../server/db/schema";
 import { action, query } from "@solidjs/router";
 
-function sortPair(a: string, b: string): [string, string] {
+export function sortPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
 }
 
-export const getFriendRequests = query(async () => {
+export const getFriends = query(async () => {
   "use server";
   const user = await requireUser();
 
@@ -17,6 +17,7 @@ export const getFriendRequests = query(async () => {
   const rows = await db
     .select({
       requesterId: friendships.requesterId,
+      status: friendships.status,
       user: {
         id: users.id,
         username: users.username,
@@ -25,18 +26,20 @@ export const getFriendRequests = query(async () => {
     })
     .from(friendships)
     .innerJoin(users, eq(users.id, otherId))
-    .where(
-      and(
-        eq(friendships.status, "pending"),
-        or(eq(friendships.userA, user.id), eq(friendships.userB, user.id)),
-      ),
-    )
+    .where(or(eq(friendships.userA, user.id), eq(friendships.userB, user.id)))
     .orderBy(desc(friendships.createdAt));
 
-  const incoming = rows.filter((row) => row.requesterId !== user.id);
-  const outgoing = rows.filter((row) => row.requesterId === user.id);
+  const incoming = rows.filter(
+    (row) => row.requesterId !== user.id && row.status === "pending",
+  );
 
-  return { incoming, outgoing };
+  const outgoing = rows.filter(
+    (row) => row.requesterId === user.id && row.status === "pending",
+  );
+
+  const friends = rows.filter((row) => row.status === "accepted");
+
+  return { incoming, outgoing, friends };
 }, "getFriendRequests");
 
 export const sendFriendRequest = action(

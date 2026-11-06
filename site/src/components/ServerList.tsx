@@ -10,7 +10,7 @@ export default function Serverlist() {
     <aside class="flex flex-col gap-2">
       <a
         href="/app"
-        class={`size-14 rounded-sm flex ${location.pathname === "/app" ? "bg-primary text-primary-fg" : "bg-card text-fg"}`}
+        class={`size-14 rounded-sm flex ${location.pathname.startsWith("/app") && !location.pathname.startsWith("/app/server") ? "bg-primary text-primary-fg" : "bg-card text-fg"}`}
       >
         <Home class="m-auto size-6" />
       </a>
