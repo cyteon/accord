@@ -17,10 +17,6 @@ import {
   sendFriendRequest,
 } from "~/lib/api/friends";
 
-export const route = {
-  preload: () => requireUserQ(),
-} satisfies RouteDefinition;
-
 export default function App() {
   const user = createAsync(() => requireUserQ(), { deferStream: true });
   const friends = createAsync(() => getFriends());

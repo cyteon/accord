@@ -4,10 +4,14 @@ import { solidStart } from "@solidjs/start/config";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [
-    solidStart(),
-    nitro(),
-    tailwindcss()
-  ],
-  ssr: { external: ["drizzle-orm"] }
+  plugins: [solidStart(), nitro(), tailwindcss()],
+  server: {
+    proxy: {
+      "/gateway": {
+        target: "ws://localhost:4001",
+        ws: true,
+      },
+    },
+  },
+  ssr: { external: ["drizzle-orm"] },
 });

@@ -12,10 +12,6 @@ import { requireUserQ } from "~/lib/api/auth";
 import { getDm, getOlderMessages, sendDm } from "~/lib/api/dms";
 import { Message } from "~/lib/types/client/message";
 
-export const route = {
-  preload: () => requireUserQ(),
-} satisfies RouteDefinition;
-
 export default function UserDM() {
   const sendMessage = useSubmission(sendDm);
 
