@@ -3,6 +3,7 @@ import { requireUser } from "../server/auth";
 import db from "../server/db";
 import { friendships, users } from "../server/db/schema";
 import { action, query } from "@solidjs/router";
+import { publish } from "../server/realtime";
 
 export function sortPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
@@ -102,6 +103,10 @@ export const sendFriendRequest = action(
       status: "pending",
     });
 
+    publish([self.id, target.id], {
+      e: "FRIEND_REQUEST_CREATE",
+    });
+
     return "Friend request sent";
   },
 );
@@ -123,6 +128,10 @@ export const acceptFriendRequest = action(async (otherId: string) => {
       acceptedAt: new Date(),
     })
     .where(and(pairQuery, eq(friendships.requesterId, otherId)));
+
+  publish([self.id, otherId], {
+    e: "FRIEND_REQUEST_UPDATE",
+  });
 });
 
 export const declineFriendRequest = action(async (otherId: string) => {
@@ -144,6 +153,10 @@ export const declineFriendRequest = action(async (otherId: string) => {
         eq(friendships.status, "pending"),
       ),
     );
+
+  publish([self.id, otherId], {
+    e: "FRIEND_REQUEST_DELETE",
+  });
 });
 
 export const cancelFriendRequest = action(async (otherId: string) => {
@@ -165,4 +178,8 @@ export const cancelFriendRequest = action(async (otherId: string) => {
         eq(friendships.status, "pending"),
       ),
     );
+
+  publish([self.id, otherId], {
+    e: "FRIEND_REQUEST_DELETE",
+  });
 });

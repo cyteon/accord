@@ -11,4 +11,10 @@ export type Message = {
     username: string;
     displayName: string;
   };
+
+  // joined on query
+  channel: {
+    id: string;
+    type: "dm" | "group" | "channel";
+  };
 };

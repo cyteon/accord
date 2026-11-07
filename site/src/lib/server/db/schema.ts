@@ -1,5 +1,7 @@
 import {
+  AnyPgColumn,
   boolean,
+  check,
   index,
   pgEnum,
   pgTable,
@@ -55,12 +57,19 @@ export const friendships = pgTable(
   (t) => [primaryKey({ columns: [t.userA, t.userB] })],
 );
 
+export const channelType = pgEnum("channel_type", ["dm", "group", "channel"]);
+
 // currently only dms
 export const channels = pgTable("channels", {
   id: uuid()
     .primaryKey()
     .$defaultFn(() => v7()),
   dmKey: text().unique(),
+  type: channelType().notNull(),
+
+  lastMessageId: uuid().references((): AnyPgColumn => messages.id, {
+    onDelete: "set null",
+  }),
 });
 
 export const messages = pgTable(

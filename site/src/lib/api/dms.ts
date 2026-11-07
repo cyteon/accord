@@ -3,7 +3,19 @@ import { requireUser } from "../server/auth";
 import { sortPair } from "./friends";
 import db from "../server/db";
 import { channels, messages, users } from "../server/db/schema";
-import { and, desc, eq, getTableColumns, lt } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNull,
+  like,
+  lt,
+  max,
+  or,
+  sql,
+} from "drizzle-orm";
 import { getOrCreateDm } from "../server/dms";
 import { publish } from "../server/realtime";
 
@@ -79,14 +91,31 @@ export const sendDm = action(async (formData: FormData) => {
 
   const dm = await getOrCreateDm(self.id, otherId);
 
-  const [message] = await db
-    .insert(messages)
-    .values({
-      channelId: dm.id,
-      authorId: self.id,
-      content,
-    })
-    .returning();
+  const message = await db.transaction(async (tx) => {
+    const [message] = await tx
+      .insert(messages)
+      .values({
+        channelId: dm.id,
+        authorId: self.id,
+        content,
+      })
+      .returning();
+
+    await tx
+      .update(channels)
+      .set({ lastMessageId: message.id })
+      .where(
+        and(
+          eq(channels.id, dm.id),
+          or(
+            isNull(channels.lastMessageId),
+            lt(channels.lastMessageId, message.id),
+          ),
+        ),
+      );
+
+    return message;
+  });
 
   await publish([self.id, otherId], {
     e: "MESSAGE_CREATE",
@@ -133,3 +162,68 @@ export async function getOlderMessages(otherId: string, beforeId: string) {
 
   return rows.reverse();
 }
+
+export const getDmList = query(async () => {
+  "use server";
+  const self = await requireUser();
+
+  const rows = await db
+    .select({
+      dmKey: channels.dmKey,
+      lastMessage: {
+        content: messages.content,
+        authorId: messages.authorId,
+        createdAt: messages.createdAt,
+      },
+    })
+    .from(channels)
+    .innerJoin(messages, eq(messages.id, channels.lastMessageId))
+    .where(
+      or(
+        like(channels.dmKey, `${self.id}:%`),
+        like(channels.dmKey, `%:${self.id}`),
+      ),
+    )
+    .orderBy(desc(channels.lastMessageId));
+
+  const dms = rows.map((row) => {
+    const [userA, userB] = row.dmKey.split(":");
+
+    return {
+      otherId: userA === self.id ? userB : userA,
+      lastMessage: {
+        ...row.lastMessage,
+        isMine: row.lastMessage.authorId === self.id,
+      },
+    };
+  });
+
+  const others = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+    })
+    .from(users)
+    .where(
+      inArray(
+        users.id,
+        dms.map((dm) => dm.otherId),
+      ),
+    );
+
+  const byId = new Map(others.map((user) => [user.id, user]));
+
+  return dms.flatMap((dm) => {
+    const user = byId.get(dm.otherId);
+
+    return user
+      ? [
+          {
+            ...dm,
+            otherUser: user,
+          },
+        ]
+      : [];
+  });
+}, "getDmList");

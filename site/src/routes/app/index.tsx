@@ -1,6 +1,11 @@
-import { createAsync, useAction, useSubmission } from "@solidjs/router";
+import {
+  createAsync,
+  revalidate,
+  useAction,
+  useSubmission,
+} from "@solidjs/router";
 import { Check, MessagesCircle, X } from "lucide-solid";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onCleanup, Show } from "solid-js";
 import HomeSidebar from "~/components/HomeSidebar";
 import Serverlist from "~/components/ServerList";
 import {
@@ -10,6 +15,7 @@ import {
   getFriends,
   sendFriendRequest,
 } from "~/lib/api/friends";
+import { onEvent } from "~/lib/gateway";
 
 export default function App() {
   const friends = createAsync(() => getFriends());
@@ -24,6 +30,11 @@ export default function App() {
   const accept = useAction(acceptFriendRequest);
   const decline = useAction(declineFriendRequest);
   const cancel = useAction(cancelFriendRequest);
+
+  onCleanup(onEvent("FRIEND_REQUEST_CREATE", () => revalidate(getFriends.key)));
+  onCleanup(onEvent("FRIEND_REQUEST_DELETE", () => revalidate(getFriends.key)));
+  onCleanup(onEvent("FRIEND_REQUEST_UPDATE", () => revalidate(getFriends.key)));
+
   return (
     <main class="flex p-2.5 gap-2.5 h-screen">
       <Serverlist />
